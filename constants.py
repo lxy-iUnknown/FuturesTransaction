@@ -44,10 +44,7 @@ class ColumnNames(NamedTuple):
     LOW: str     # 最低价
     HIGH: str    # 最高价
     TR: str      # TR
-    VOLUME: str  # 成交额
-    AMOUNT: str  # 成交量
 
 
-COLUMN_NAMES = ColumnNames('日期', '开盘价(元)', '最高价(元)', '最低价(元)', '收盘价(元)',
-                           '真实波动幅度', '成交额(百万)', '成交量(股)')
+COLUMN_NAMES = ColumnNames('日期', '开盘价(元)', '最高价(元)', '最低价(元)', '收盘价(元)', '真实波动幅度')
 PARAMS = AnalyzerParameters(20, 7, 4, 0.5, 2.0, 3.0, 0.3)

@@ -307,12 +307,9 @@ class Transaction:
             self._clear_all()
 
     def transact(self) -> None:
-        for index, time_today, open_price, close_price, high, \
-                low, volume, amount, tr in self._input[PARAMS.T:].itertuples():
-            if volume == 0 or amount == 0:
-                price = (high + low) / 2
-            else:
-                price = volume * 10000 / amount
+        for index, time_today, open_price, close_price, \
+                high, low, tr in self._input[PARAMS.T:].itertuples():
+            price = close_price
             self._calculate_atr(index, tr)
             self._calculate_min_max(index)
             self._enter(time_today, high, low)
