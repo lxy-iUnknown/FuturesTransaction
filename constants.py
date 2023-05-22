@@ -16,12 +16,26 @@ class AnalyzerParameters:
 
     @staticmethod
     def _ensure_positive(value: _T, value_name: str) -> _T:
+        """
+        确保参数大于0
+        :param value: 参数
+        :param value_name: 参数名
+        :return: 如果检验成功，则返回原本的参数
+        :raise ValueError: 参数检验失败
+        """
         if value <= 0:
             raise ValueError(f"Argument '{value_name}' must be positive, not {value}")
         return value
 
     @staticmethod
     def _ensure_ratio(value: _T, value_name: str) -> _T:
+        """
+        确保参数在[0, 1]之间
+        :param value: 参数
+        :param value_name: 参数名
+        :return: 如果检验成功，则返回原本的参数
+        :raise ValueError: 参数检验失败
+        """
         if value < 0 or value > 1:
             raise ValueError(f"Argument '{value_name}' must be in [0, 1], not {value}")
         return value
@@ -47,4 +61,4 @@ class ColumnNames(NamedTuple):
 
 
 COLUMN_NAMES = ColumnNames('日期', '开盘价(元)', '最高价(元)', '最低价(元)', '收盘价(元)', '真实波动幅度')
-PARAMS = AnalyzerParameters(20, 7, 4, 0.5, 2.0, 3.0, 0.3)
+PARAMS = AnalyzerParameters(20, 7, 4, 0.5, 2.0, 3.0, 0.6)

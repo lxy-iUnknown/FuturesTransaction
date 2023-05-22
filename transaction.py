@@ -15,8 +15,8 @@ class EnterType(StrEnum):
 
 class ExitType(StrEnum):
     LongProfit = '止盈多平'
-    LongLoss = '止盈空平'
-    ShortProfit = '止损多平'
+    LongLoss = '止损空平'
+    ShortProfit = '止盈空平'
     ShortLoss = '止损空平'
     Expired = '到期离市'
     Undefined = ''
@@ -39,7 +39,7 @@ class Transaction:
 
         self._clear_all()
 
-    def _clear_all(self):
+    def _clear_all(self) -> None:
         self._positions.clear()
 
         self._enter_type: EnterType = EnterType.Undefined
@@ -134,12 +134,13 @@ class Transaction:
         """
         if self._entered:
             return
-        if high > self._high_max:
+        high_max = self._high_max
+        if high > high_max:
             # 当日最高价高于此前T日最高价格
-            self._enter_common(time_today, EnterType.LongPosition, high)
+            self._enter_common(time_today, EnterType.LongPosition, high_max)
         elif low < self._low_min:
             # 当日最低价低于此前T日最低价格
-            self._enter_common(time_today, EnterType.ShortPosition, high)
+            self._enter_common(time_today, EnterType.ShortPosition, high_max)
 
     def _add_common(self, add_price: float) -> None:
         """
@@ -171,30 +172,59 @@ class Transaction:
             if low < open_price:
                 self._add_common(open_price)
 
+    def _update_profit(self, profit: float) -> None:
+        """
+        更新当日持仓利润和最大利润
+        :param profit: 当日持仓利润
+        :return:
+        """
+        self._current_profit = profit
+        self._max_profit = max(self._max_profit, profit)
+
     def _calculate_profit(self, price: float) -> None:
         """
         计算并更新当日持仓利润和最大利润
         :param price: 利润计算价格
-        :return: 当日持仓利润
+        :return:
         """
         if self._entered:
-            self._current_profit = price * self._position_count - sum(self._positions)
+            profit = price * self._position_count - sum(self._positions)
             if self._enter_type == EnterType.ShortPosition:
-                self._current_profit = -self._current_profit
-            self._max_profit = max(self._max_profit, self._current_profit)
+                profit = -profit
+            self._update_profit(profit)
 
-    def _exiting_common(self, time_today: datetime, exit_price: float, exit_type: ExitType) -> None:
+    def _exiting_common(self, time_today: datetime, exit_type: ExitType) -> None:
         """
         准备离市
+        :param time_today: 当日日期
+        :param exit_type: 离市类型
+        :return:
+        """
+        self._exit_type = exit_type
+        self._exit_time = time_today
+        self._exit_profit = self._current_profit
+
+    def _exiting_with_price(self, time_today: datetime, exit_price: float, exit_type: ExitType) -> None:
+        """
+        准备离市（使用离市价格计算离市利润）
         :param time_today: 当日日期
         :param exit_price 离市价格
         :param exit_type: 离市类型
         :return:
         """
         self._calculate_profit(exit_price)
-        self._exit_type = exit_type
-        self._exit_time = time_today
-        self._exit_profit = self._current_profit
+        self._exiting_common(time_today, exit_type)
+
+    def _exiting_with_profit(self, time_today: datetime, exit_profit: float, exit_type: ExitType) -> None:
+        """
+        准备离市（直接使用离市利润）
+        :param time_today: 当日日期
+        :param exit_profit 离市利润
+        :param exit_type: 离市类型
+        :return:
+        """
+        self._update_profit(exit_profit)
+        self._exiting_common(time_today, exit_type)
 
     def _stop_loss(self, time_today: datetime, high: float, low: float) -> None:
         """
@@ -208,14 +238,14 @@ class Transaction:
             return
         if self._enter_type == EnterType.LongPosition:
             # 当日最低价小于K倍入市ATR和上一次开仓价之差
-            exit_price = PARAMS.K * self._enter_atr - self._last_open_price
+            exit_price = self._last_open_price - PARAMS.K * self._enter_atr
             if low < exit_price:
-                self._exiting_common(time_today, exit_price, ExitType.LongLoss)
+                self._exiting_with_price(time_today, exit_price, ExitType.LongLoss)
         elif self._enter_type == EnterType.ShortPosition:
             # 当日最高价大于K倍入市ATR和上一次开仓价之和
-            exit_price = PARAMS.K * self._enter_atr + self._last_open_price
+            exit_price = self._last_open_price + PARAMS.K * self._enter_atr
             if high > exit_price:
-                self._exiting_common(time_today, exit_price, ExitType.ShortLoss)
+                self._exiting_with_price(time_today, exit_price, ExitType.ShortLoss)
 
     def _stop_profit(self, time_today: datetime) -> None:
         """
@@ -223,18 +253,18 @@ class Transaction:
         :param time_today: 当日日期
         :return:
         """
-        # 当前利润超过P个当日ATR时准备止盈
-        if self._entered and self._current_profit > PARAMS.P * self._atr:
-            self._stop_profit_prepared = True
-        elif self._stop_profit_prepared:
+        if self._stop_profit_prepared:
             # 当前利润小于入市以来最高利润的比例Q时正式止盈
-            exit_price = PARAMS.Q * self._max_profit
-            if self._current_profit < exit_price:
+            exit_profit = PARAMS.Q * self._max_profit
+            if self._current_profit < exit_profit:
                 if self._enter_type == EnterType.LongPosition:
-                    self._exiting_common(time_today, exit_price, ExitType.LongProfit)
+                    self._exiting_with_profit(time_today, exit_profit, ExitType.LongProfit)
                 elif self._enter_type == EnterType.ShortPosition:
-                    self._exiting_common(time_today, exit_price, ExitType.ShortProfit)
+                    self._exiting_with_profit(time_today, exit_profit, ExitType.ShortProfit)
                 self._stop_profit_prepared = False
+        elif self._entered and self._current_profit > PARAMS.P * self._atr:
+            # 当前利润超过P个当日ATR时准备止盈
+            self._stop_profit_prepared = True
 
     def _expire(self, index: int, time_today: datetime, close_price: float) -> None:
         """
@@ -244,7 +274,7 @@ class Transaction:
         """
         # 日期到达最后一天
         if self._entered and index == self._last_index:
-            self._exiting_common(time_today, close_price, ExitType.Expired)
+            self._exiting_with_price(time_today, close_price, ExitType.Expired)
 
     def _write_info(self, index: int, time_today: int, high: float,
                     low: float, open_price: float, close_price: float) -> None:
@@ -303,7 +333,7 @@ class Transaction:
             self._low_min, max_profit, current_profit, str(exit_type), exit_time, exit_profit
         )
         if self._exiting:
-            # 正式离市
+            # 清空所有数据
             self._clear_all()
 
     def transact(self) -> None:
