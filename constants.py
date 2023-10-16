@@ -3,7 +3,7 @@ import typing
 
 
 @dataclasses.dataclass(eq=False, frozen=True)
-class AnalyzerParameters:
+class TransactionParameters:
     T: int    # 突破周期
     M: int    # ATR计算天数
     R: int    # 最大持仓数量
@@ -11,39 +11,6 @@ class AnalyzerParameters:
     K: float  # 止损回撤率
     P: float  # 止盈利润倍数
     Q: float  # 止盈回撤比例
-
-    @staticmethod
-    def _ensure_positive(value, value_name: str):
-        """
-        确保参数大于0
-        :param value: 参数
-        :param value_name: 参数名
-        :return: 如果检验成功，则返回原本的参数
-        :raise ValueError: 参数检验失败
-        """
-        if value <= 0:
-            raise ValueError(f"Argument '{value_name}' must be positive, not {value}")
-
-    @staticmethod
-    def _ensure_ratio(value, value_name: str):
-        """
-        确保参数在[0, 1]之间
-        :param value: 参数
-        :param value_name: 参数名
-        :return: 如果检验成功，则返回原本的参数
-        :raise ValueError: 参数检验失败
-        """
-        if value < 0 or value > 1:
-            raise ValueError(f"Argument '{value_name}' must be in [0, 1], not {value}")
-
-    def __post_init__(self):
-        self._ensure_positive(self.T, 'T')
-        self._ensure_positive(self.M, 'M')
-        self._ensure_positive(self.R, 'R')
-        self._ensure_positive(self.N, 'N')
-        self._ensure_positive(self.K, 'K')
-        self._ensure_positive(self.P, 'P')
-        self._ensure_ratio(self.Q, 'Q')
 
 
 class ColumnNames(typing.NamedTuple):
@@ -56,4 +23,4 @@ class ColumnNames(typing.NamedTuple):
 
 
 COLUMN_NAMES = ColumnNames('日期', '开盘价(元)', '最高价(元)', '最低价(元)', '收盘价(元)', '真实波动幅度')
-PARAMS = AnalyzerParameters(20, 7, 4, 0.5, 2.0, 3.0, 0.6)
+TRANSACTION_PARAMETERS = TransactionParameters(20, 7, 4, 0.5, 2.0, 3.0, 0.6)
