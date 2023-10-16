@@ -1,11 +1,8 @@
-from typing import NamedTuple, TypeVar
 from dataclasses import dataclass
 
 
 @dataclass(eq=False, frozen=True)
 class AnalyzerParameters:
-    __T = TypeVar('__T')
-
     T: int    # 突破周期
     M: int    # ATR计算天数
     R: int    # 最大持仓数量
@@ -15,7 +12,7 @@ class AnalyzerParameters:
     Q: float  # 止盈回撤比例
 
     @staticmethod
-    def __ensure_positive(value: __T, value_name: str) -> __T:
+    def __ensure_positive(value, value_name: str) -> None:
         """
         确保参数大于0
         :param value: 参数
@@ -25,10 +22,9 @@ class AnalyzerParameters:
         """
         if value <= 0:
             raise ValueError(f"Argument '{value_name}' must be positive, not {value}")
-        return value
 
     @staticmethod
-    def __ensure_ratio(value: __T, value_name: str) -> __T:
+    def __ensure_ratio(value, value_name: str) -> None:
         """
         确保参数在[0, 1]之间
         :param value: 参数
@@ -38,7 +34,6 @@ class AnalyzerParameters:
         """
         if value < 0 or value > 1:
             raise ValueError(f"Argument '{value_name}' must be in [0, 1], not {value}")
-        return value
 
     def __post_init__(self):
         self.__ensure_positive(self.T, 'T')
@@ -51,7 +46,7 @@ class AnalyzerParameters:
 
 
 @dataclass(eq=False, frozen=True)
-class ColumnNames(NamedTuple):
+class ColumnNames:
     DATE: str    # 日期
     OPEN: str    # 开盘价
     CLOSE: str   # 收盘价
