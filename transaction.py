@@ -1,19 +1,20 @@
-from constants import COLUMN_NAMES, PARAMS
-from datetime import datetime
-from enum import StrEnum
-from math import inf, nan
+import datetime
+import enum
+import math
 import pandas as pd
+
+from constants import COLUMN_NAMES, PARAMS
 
 ATR_START_DATE = PARAMS.T + PARAMS.M
 
 
-class EnterType(StrEnum):
+class EnterType(enum.StrEnum):
     LongPosition = '开多'
     ShortPosition = '开空'
     Undefined = ''
 
 
-class ExitType(StrEnum):
+class ExitType(enum.StrEnum):
     LongProfit = '止盈多平'
     LongLoss = '止损空平'
     ShortProfit = '止盈空平'
@@ -24,41 +25,42 @@ class ExitType(StrEnum):
 
 class Transaction:
     def __init__(self, input_data: pd.DataFrame, output_data: pd.DataFrame):
-        self._input: pd.DataFrame = input_data
-        self._output: pd.DataFrame = output_data
-        self._last_index: int = len(input_data) - 1
+        self._input = input_data
+        self._output = output_data
+        self._last_index = len(input_data) - 1
 
         self._high_series: pd.Series = input_data[COLUMN_NAMES.HIGH]  # 输入数据最高价
-        self._low_series: pd.Series = input_data[COLUMN_NAMES.LOW]  # 输入数据最低价
+        self._low_series: pd.Series = input_data[COLUMN_NAMES.LOW]    # 输入数据最低价
+        self._tr_series: pd.Series = input_data[COLUMN_NAMES.TR]      # 输入数据TR
 
-        self._atr: float = 0.0  # 当日ATR
-        self._high_max: float = 0.0  # 前T日最高价
-        self._low_min: float = 0.0  # 前T日最低价
+        self._atr = 0.0  # 当日ATR
+        self._high_max = 0.0  # 前T日最高价
+        self._low_min = 0.0  # 前T日最低价
 
         self._positions: list[float] = []  # 每一次开仓价格
 
         self._clear_all()
 
-    def _clear_all(self) -> None:
+    def _clear_all(self):
         self._positions.clear()
 
-        self._enter_type: EnterType = EnterType.Undefined
-        self._enter_price: float = nan  # 入市价格
-        self._enter_atr: float = nan  # 入市ATR
+        self._enter_type = EnterType.Undefined
+        self._enter_price = math.nan  # 入市价格
+        self._enter_atr = math.nan  # 入市ATR
 
-        self._last_open_price: float = nan  # 最后一次开仓时的价格
+        self._last_open_price = math.nan  # 最后一次开仓时的价格
 
-        self._exit_type: ExitType = ExitType.Undefined  # 离市类型
+        self._exit_type = ExitType.Undefined  # 离市类型
         # noinspection PyTypeChecker
-        self._exit_time: datetime = pd.NaT  # 离市时间
-        self._exit_profit: float = nan  # 离市利润
+        self._exit_time: datetime.datetime = pd.NaT  # 离市时间
+        self._exit_profit = math.nan  # 离市利润
 
-        self._max_profit: float = -inf  # 入市以来最高利润（由于利润有可能是负数，因此初始化为-∞）
+        self._max_profit = -math.inf  # 入市以来最高利润（由于利润有可能是负数，因此初始化为-∞）
 
         self._stop_profit_prepared = False  # 是否已准备止盈
 
     @property
-    def _position_count(self) -> int:
+    def _position_count(self):
         """
         获取持仓数目
         :return: 持仓数目
@@ -66,7 +68,7 @@ class Transaction:
         return len(self._positions)
 
     @property
-    def _entered(self) -> bool:
+    def _entered(self):
         """
         判断是否已入市
         :return: 是否已入市
@@ -74,14 +76,14 @@ class Transaction:
         return self._enter_type != EnterType.Undefined
 
     @property
-    def _exiting(self) -> bool:
+    def _exiting(self):
         """
         判断是否正在离市
         :return: 是否正在离市
         """
         return self._exit_type != ExitType.Undefined
 
-    def _calculate_atr(self, index: int, tr: float) -> None:
+    def _calculate_atr(self, index: int, tr: float):
         """
         计算当日ATR
         :param index: 日期下标
@@ -90,7 +92,7 @@ class Transaction:
         """
         if index == ATR_START_DATE:
             # 计算第一个ATR
-            sum_tr = self._input[COLUMN_NAMES.TR][PARAMS.T + 1: ATR_START_DATE + 1].sum()
+            sum_tr = self._tr_series[PARAMS.T + 1: ATR_START_DATE + 1].sum()
             self._atr = float(sum_tr) / PARAMS.M
         elif index > ATR_START_DATE:
             # 计算下一个ATR
@@ -99,7 +101,7 @@ class Transaction:
             # 没有足够的数据来计算ATR
             self._atr = 0.0
 
-    def _calculate_min_max(self, index: int) -> None:
+    def _calculate_min_max(self, index: int):
         """
         计算前T日最高价和最低价
         :param index: 日期下标
@@ -109,7 +111,7 @@ class Transaction:
         self._high_max = self._high_series[index_slice].max()
         self._low_min = self._low_series[index_slice].min()
 
-    def _enter_common(self, time_today: datetime, enter_type: EnterType, enter_price: float) -> None:
+    def _enter_common(self, time_today: datetime.datetime, enter_type: EnterType, enter_price: float):
         """
         记录入市时间、入市类型、入市价格（此前T日最高价格）、入市ATR
         :param enter_price: 入市价格
@@ -124,7 +126,7 @@ class Transaction:
         self._enter_atr = self._atr
         self._last_open_price = enter_price
 
-    def _enter(self, time_today: datetime, high: float, low: float) -> None:
+    def _enter(self, time_today: datetime.datetime, high: float, low: float):
         """
         入市操作
         :param time_today: 当日日期
@@ -142,7 +144,7 @@ class Transaction:
             # 当日最低价低于此前T日最低价格
             self._enter_common(time_today, EnterType.ShortPosition, high_max)
 
-    def _add_common(self, add_price: float) -> None:
+    def _add_common(self, add_price: float):
         """
         加仓操作
         :param add_price: 加仓价格
@@ -151,7 +153,7 @@ class Transaction:
         self._positions.append(add_price)
         self._last_open_price = add_price
 
-    def _add_position(self, high: float, low: float) -> None:
+    def _add_position(self, high: float, low: float):
         """
         加仓操作
         :param high: 当日最高价
@@ -172,7 +174,7 @@ class Transaction:
             if low < open_price:
                 self._add_common(open_price)
 
-    def _update_profit(self, profit: float) -> None:
+    def _update_profit(self, profit: float):
         """
         更新当日持仓利润和最大利润
         :param profit: 当日持仓利润
@@ -181,7 +183,7 @@ class Transaction:
         self._current_profit = profit
         self._max_profit = max(self._max_profit, profit)
 
-    def _calculate_profit(self, price: float) -> None:
+    def _calculate_profit(self, price: float):
         """
         计算并更新当日持仓利润和最大利润
         :param price: 利润计算价格
@@ -193,7 +195,7 @@ class Transaction:
                 profit = -profit
             self._update_profit(profit)
 
-    def _exiting_common(self, time_today: datetime, exit_type: ExitType) -> None:
+    def _exiting_common(self, time_today: datetime.datetime, exit_type: ExitType):
         """
         准备离市
         :param time_today: 当日日期
@@ -204,7 +206,7 @@ class Transaction:
         self._exit_time = time_today
         self._exit_profit = self._current_profit
 
-    def _exiting_with_price(self, time_today: datetime, exit_price: float, exit_type: ExitType) -> None:
+    def _exiting_with_price(self, time_today: datetime.datetime, exit_price: float, exit_type: ExitType):
         """
         准备离市（使用离市价格计算离市利润）
         :param time_today: 当日日期
@@ -215,7 +217,7 @@ class Transaction:
         self._calculate_profit(exit_price)
         self._exiting_common(time_today, exit_type)
 
-    def _exiting_with_profit(self, time_today: datetime, exit_profit: float, exit_type: ExitType) -> None:
+    def _exiting_with_profit(self, time_today: datetime.datetime, exit_profit: float, exit_type: ExitType):
         """
         准备离市（直接使用离市利润）
         :param time_today: 当日日期
@@ -226,7 +228,7 @@ class Transaction:
         self._update_profit(exit_profit)
         self._exiting_common(time_today, exit_type)
 
-    def _stop_loss(self, time_today: datetime, high: float, low: float) -> None:
+    def _stop_loss(self, time_today: datetime.datetime, high: float, low: float):
         """
         止损操作
         :param time_today: 当日日期
@@ -247,7 +249,7 @@ class Transaction:
             if high > exit_price:
                 self._exiting_with_price(time_today, exit_price, ExitType.ShortLoss)
 
-    def _stop_profit(self, time_today: datetime) -> None:
+    def _stop_profit(self, time_today: datetime.datetime):
         """
         止盈操作
         :param time_today: 当日日期
@@ -266,7 +268,7 @@ class Transaction:
             # 当前利润超过P个当日ATR时准备止盈
             self._stop_profit_prepared = True
 
-    def _expire(self, index: int, time_today: datetime, close_price: float) -> None:
+    def _expire(self, index: int, time_today: datetime.datetime, close_price: float):
         """
         :param time_today: 当日日期
         :param close_price: 收盘价
@@ -277,7 +279,7 @@ class Transaction:
             self._exiting_with_price(time_today, close_price, ExitType.Expired)
 
     def _write_info(self, index: int, time_today: int, high: float,
-                    low: float, open_price: float, close_price: float) -> None:
+                    low: float, open_price: float, close_price: float):
         """
         输出当日信息
         :param index: 日期下标
@@ -310,22 +312,22 @@ class Transaction:
         else:
             enter_time = pd.NaT
             enter_type = EnterType.Undefined
-            enter_atr = nan
-            enter_price = nan
+            enter_atr = math.nan
+            enter_price = math.nan
 
             long_position_count = 0
             short_position_count = 0
 
-            max_profit = nan
-            current_profit = nan
+            max_profit = math.nan
+            current_profit = math.nan
             exit_type = ExitType.Undefined
             exit_time = pd.NaT
-            exit_profit = nan
+            exit_profit = math.nan
 
         if index >= ATR_START_DATE:
             atr = self._atr
         else:
-            atr = nan
+            atr = math.nan
 
         self._output.loc[index - PARAMS.T] = (
             time_today, atr, high, low, open_price, close_price, enter_time, str(enter_type),
@@ -336,7 +338,7 @@ class Transaction:
             # 清空所有数据
             self._clear_all()
 
-    def transact(self) -> None:
+    def transact(self):
         for index, time_today, open_price, close_price, \
                 high, low, tr in self._input[PARAMS.T:].itertuples():
             price = close_price

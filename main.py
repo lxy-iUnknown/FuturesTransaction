@@ -1,7 +1,8 @@
-from transaction import Transaction
-from data_io import load_data, save_data
-from constants import COLUMN_NAMES
 import pandas as pd
+
+from constants import COLUMN_NAMES
+from data_io import load_data, save_data
+from transaction import Transaction
 
 # https://pandas.pydata.org/docs/user_guide/indexing.html#indexing-view-versus-copy
 pd.options.mode.chained_assignment = 'raise'

@@ -1,7 +1,7 @@
-from dataclasses import dataclass
+import dataclasses
 
 
-@dataclass(eq=False, frozen=True)
+@dataclasses.dataclass(eq=False, frozen=True)
 class AnalyzerParameters:
     T: int    # 突破周期
     M: int    # ATR计算天数
@@ -12,7 +12,7 @@ class AnalyzerParameters:
     Q: float  # 止盈回撤比例
 
     @staticmethod
-    def __ensure_positive(value, value_name: str) -> None:
+    def __ensure_positive(value, value_name: str):
         """
         确保参数大于0
         :param value: 参数
@@ -24,7 +24,7 @@ class AnalyzerParameters:
             raise ValueError(f"Argument '{value_name}' must be positive, not {value}")
 
     @staticmethod
-    def __ensure_ratio(value, value_name: str) -> None:
+    def __ensure_ratio(value, value_name: str):
         """
         确保参数在[0, 1]之间
         :param value: 参数
@@ -45,7 +45,7 @@ class AnalyzerParameters:
         self.__ensure_ratio(self.Q, 'Q')
 
 
-@dataclass(eq=False, frozen=True)
+@dataclasses.dataclass(eq=False, frozen=True)
 class ColumnNames:
     DATE: str    # 日期
     OPEN: str    # 开盘价
