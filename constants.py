@@ -1,4 +1,5 @@
 import dataclasses
+import typing
 
 
 @dataclasses.dataclass(eq=False, frozen=True)
@@ -45,8 +46,7 @@ class AnalyzerParameters:
         self._ensure_ratio(self.Q, 'Q')
 
 
-@dataclasses.dataclass(eq=False, frozen=True)
-class ColumnNames:
+class ColumnNames(typing.NamedTuple):
     DATE: str    # 日期
     OPEN: str    # 开盘价
     CLOSE: str   # 收盘价
