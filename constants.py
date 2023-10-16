@@ -12,7 +12,7 @@ class AnalyzerParameters:
     Q: float  # 止盈回撤比例
 
     @staticmethod
-    def __ensure_positive(value, value_name: str):
+    def _ensure_positive(value, value_name: str):
         """
         确保参数大于0
         :param value: 参数
@@ -24,7 +24,7 @@ class AnalyzerParameters:
             raise ValueError(f"Argument '{value_name}' must be positive, not {value}")
 
     @staticmethod
-    def __ensure_ratio(value, value_name: str):
+    def _ensure_ratio(value, value_name: str):
         """
         确保参数在[0, 1]之间
         :param value: 参数
@@ -36,13 +36,13 @@ class AnalyzerParameters:
             raise ValueError(f"Argument '{value_name}' must be in [0, 1], not {value}")
 
     def __post_init__(self):
-        self.__ensure_positive(self.T, 'T')
-        self.__ensure_positive(self.M, 'M')
-        self.__ensure_positive(self.R, 'R')
-        self.__ensure_positive(self.N, 'N')
-        self.__ensure_positive(self.K, 'K')
-        self.__ensure_positive(self.P, 'P')
-        self.__ensure_ratio(self.Q, 'Q')
+        self._ensure_positive(self.T, 'T')
+        self._ensure_positive(self.M, 'M')
+        self._ensure_positive(self.R, 'R')
+        self._ensure_positive(self.N, 'N')
+        self._ensure_positive(self.K, 'K')
+        self._ensure_positive(self.P, 'P')
+        self._ensure_ratio(self.Q, 'Q')
 
 
 @dataclasses.dataclass(eq=False, frozen=True)
