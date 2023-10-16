@@ -2,9 +2,9 @@ from typing import NamedTuple, TypeVar
 from dataclasses import dataclass
 
 
-@dataclass(eq=False)
+@dataclass(eq=False, frozen=True)
 class AnalyzerParameters:
-    _T = TypeVar('_T')
+    __T = TypeVar('__T')
 
     T: int    # 突破周期
     M: int    # ATR计算天数
@@ -15,7 +15,7 @@ class AnalyzerParameters:
     Q: float  # 止盈回撤比例
 
     @staticmethod
-    def _ensure_positive(value: _T, value_name: str) -> _T:
+    def __ensure_positive(value: __T, value_name: str) -> __T:
         """
         确保参数大于0
         :param value: 参数
@@ -28,7 +28,7 @@ class AnalyzerParameters:
         return value
 
     @staticmethod
-    def _ensure_ratio(value: _T, value_name: str) -> _T:
+    def __ensure_ratio(value: __T, value_name: str) -> __T:
         """
         确保参数在[0, 1]之间
         :param value: 参数
@@ -40,17 +40,17 @@ class AnalyzerParameters:
             raise ValueError(f"Argument '{value_name}' must be in [0, 1], not {value}")
         return value
 
-    # noinspection PyPep8Naming
-    def __init__(self, T: int, M: int, R: int, N: float, K: float, P: float, Q: float):
-        self.T = self._ensure_positive(T, 'T')
-        self.M = self._ensure_positive(M, 'M')
-        self.R = self._ensure_positive(R, 'R')
-        self.N = self._ensure_positive(N, 'N')
-        self.K = self._ensure_positive(K, 'K')
-        self.P = self._ensure_positive(P, 'P')
-        self.Q = self._ensure_ratio(Q, 'Q')
+    def __post_init__(self):
+        self.__ensure_positive(self.T, 'T')
+        self.__ensure_positive(self.M, 'M')
+        self.__ensure_positive(self.R, 'R')
+        self.__ensure_positive(self.N, 'N')
+        self.__ensure_positive(self.K, 'K')
+        self.__ensure_positive(self.P, 'P')
+        self.__ensure_ratio(self.Q, 'Q')
 
 
+@dataclass(eq=False, frozen=True)
 class ColumnNames(NamedTuple):
     DATE: str    # 日期
     OPEN: str    # 开盘价
