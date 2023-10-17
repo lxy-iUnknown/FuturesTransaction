@@ -2,7 +2,7 @@ import pathlib
 import pandas as pd
 import traceback
 
-from constants import COLUMN_NAMES
+from constants import DATE, OPEN, CLOSE, LOW, HIGH, TR
 
 DATA_DIR = pathlib.Path(__file__).parent.joinpath('data')
 
@@ -14,8 +14,9 @@ DATE_TIME_FORMAT_ATTR = '_datetime_format'
 
 
 def load_data():
-    return pd.read_excel(DATA_FILE_NAME, usecols=COLUMN_NAMES)\
-        .dropna(axis=0, subset=(COLUMN_NAMES.DATE,))
+    # noinspection PyTypeChecker
+    return (pd.read_excel(DATA_FILE_NAME, usecols=(DATE, OPEN, CLOSE, LOW, HIGH, TR))
+            .dropna(axis=0, subset=(DATE,)))
 
 
 def save_data(output: pd.DataFrame):

@@ -3,7 +3,7 @@ import enum
 import math
 import pandas as pd
 
-from constants import COLUMN_NAMES, TRANSACTION_PARAMETERS
+from constants import TRANSACTION_PARAMETERS, HIGH, LOW, TR
 
 ATR_START_DATE = TRANSACTION_PARAMETERS.T + TRANSACTION_PARAMETERS.M
 
@@ -29,9 +29,9 @@ class Transaction:
         self._output = output_data
         self._last_index = len(input_data) - 1
 
-        self._high_series: pd.Series = input_data[COLUMN_NAMES.HIGH]  # 输入数据最高价
-        self._low_series: pd.Series = input_data[COLUMN_NAMES.LOW]    # 输入数据最低价
-        self._tr_series: pd.Series = input_data[COLUMN_NAMES.TR]      # 输入数据TR
+        self._high_series: pd.Series = input_data[HIGH]  # 输入数据最高价
+        self._low_series: pd.Series = input_data[LOW]    # 输入数据最低价
+        self._tr_series: pd.Series = input_data[TR]      # 输入数据TR
 
         self._atr = 0.0  # 当日ATR
         self._high_max = 0.0  # 前T日最高价
@@ -41,17 +41,18 @@ class Transaction:
 
         self._clear_all()
 
+    # noinspection PyTypeChecker
     def _clear_all(self):
         self._positions.clear()
 
         self._enter_type = EnterType.Undefined
+        self._enter_time: datetime.datetime = pd.NaT  # 入市时间
         self._enter_price = math.nan  # 入市价格
         self._enter_atr = math.nan  # 入市ATR
 
         self._last_open_price = math.nan  # 最后一次开仓时的价格
 
         self._exit_type = ExitType.Undefined  # 离市类型
-        # noinspection PyTypeChecker
         self._exit_time: datetime.datetime = pd.NaT  # 离市时间
         self._exit_profit = math.nan  # 离市利润
 
@@ -341,12 +342,11 @@ class Transaction:
     def transact(self):
         for index, time_today, open_price, close_price, \
                 high, low, tr in self._input[TRANSACTION_PARAMETERS.T:].itertuples(name=None):
-            price = close_price
             self._calculate_atr(index, tr)
             self._calculate_min_max(index)
             self._enter(time_today, high, low)
             self._add_position(high, low)
-            self._calculate_profit(price)
+            self._calculate_profit(close_price)
             self._stop_loss(time_today, high, low)
             self._stop_profit(time_today)
             self._expire(index, time_today, close_price)
