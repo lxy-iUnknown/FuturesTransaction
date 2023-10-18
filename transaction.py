@@ -1,6 +1,8 @@
 import datetime
 import enum
 import math
+import warnings
+
 import pandas as pd
 
 from constants import TRANSACTION_PARAMETERS, HIGH, LOW, TR
@@ -330,11 +332,12 @@ class Transaction:
         else:
             atr = math.nan
 
-        self._output.loc[index - TRANSACTION_PARAMETERS.T] = (
-            time_today, atr, high, low, open_price, close_price, enter_time, str(enter_type),
-            enter_atr, enter_price, long_position_count, short_position_count, self._high_max,
-            self._low_min, max_profit, current_profit, str(exit_type), exit_time, exit_profit
-        )
+        with warnings.catch_warnings(action='ignore', category=FutureWarning):
+            self._output.loc[index - TRANSACTION_PARAMETERS.T] = (
+                time_today, atr, high, low, open_price, close_price, enter_time, str(enter_type),
+                enter_atr, enter_price, long_position_count, short_position_count, self._high_max,
+                self._low_min, max_profit, current_profit, str(exit_type), exit_time, exit_profit
+            )
         if self._exiting:
             # 清空所有数据
             self._clear_all()
