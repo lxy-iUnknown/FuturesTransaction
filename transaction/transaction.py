@@ -5,7 +5,7 @@ import warnings
 
 import pandas as pd
 
-from constants import TRANSACTION_PARAMETERS, HIGH, LOW, TR
+from util.constants import TRANSACTION_PARAMETERS, HIGH, LOW, TR
 
 ATR_START_DATE = TRANSACTION_PARAMETERS.T + TRANSACTION_PARAMETERS.M
 
@@ -332,6 +332,8 @@ class Transaction:
         else:
             atr = math.nan
 
+        # https://github.com/pandas-dev/pandas/issues/39122
+        # https://github.com/pandas-dev/pandas/pull/52532
         with warnings.catch_warnings(action='ignore', category=FutureWarning):
             self._output.loc[index - TRANSACTION_PARAMETERS.T] = (
                 time_today, atr, high, low, open_price, close_price, enter_time, str(enter_type),

@@ -1,10 +1,8 @@
-import pathlib
 import pandas as pd
 import traceback
 
-from constants import DATE, OPEN, CLOSE, LOW, HIGH, TR
-
-DATA_DIR = pathlib.Path(__file__).parent.joinpath('data')
+from data.data_dir import DATA_DIR
+from util.constants import DATE, OPEN, CLOSE, LOW, HIGH, TR
 
 DATA_FILE_NAME = DATA_DIR.joinpath('data.xlsx')
 OUTPUT_FILE_NAME = DATA_DIR.joinpath('output.xlsx')
