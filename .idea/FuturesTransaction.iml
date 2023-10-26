@@ -3,8 +3,6 @@
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/data" />
-      <excludeFolder url="file://$MODULE_DIR$/ray_results" />
-      <excludeFolder url="file://$MODULE_DIR$/results" />
     </content>
     <orderEntry type="jdk" jdkName="FuturesTransaction" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
