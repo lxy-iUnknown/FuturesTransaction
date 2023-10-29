@@ -52,8 +52,6 @@ class Transaction:
         self._enter_price = math.nan  # 入市价格
         self._enter_atr = math.nan  # 入市ATR
 
-        self._last_open_price = math.nan  # 最后一次开仓时的价格
-
         self._exit_type = ExitType.Undefined  # 离市类型
         self._exit_time: datetime.datetime = pd.NaT  # 离市时间
         self._exit_profit = math.nan  # 离市利润
@@ -61,6 +59,10 @@ class Transaction:
         self._max_profit = -math.inf  # 入市以来最高利润（由于利润有可能是负数，因此初始化为-∞）
 
         self._stop_profit_prepared = False  # 是否已准备止盈
+
+    @property
+    def _last_open_price(self):
+        return math.nan if self._position_count == 0 else self._positions[-1]
 
     @property
     def _position_count(self):
@@ -127,7 +129,6 @@ class Transaction:
         self._enter_price = enter_price
         self._enter_type = enter_type
         self._enter_atr = self._atr
-        self._last_open_price = enter_price
 
     def _enter(self, time_today: datetime.datetime, high: float, low: float):
         """
@@ -154,7 +155,6 @@ class Transaction:
         :return:
         """
         self._positions.append(add_price)
-        self._last_open_price = add_price
 
     def _add_position(self, high: float, low: float):
         """
