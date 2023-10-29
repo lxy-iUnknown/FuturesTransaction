@@ -62,6 +62,10 @@ class Transaction:
 
     @property
     def _last_open_price(self):
+        """
+        获取上一次开仓价格
+        :return: 上一次开仓价格
+        """
         return math.nan if self._position_count == 0 else self._positions[-1]
 
     @property
