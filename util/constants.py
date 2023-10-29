@@ -1,7 +1,8 @@
-import typing
+import dataclasses
 
 
-class TransactionParameters(typing.NamedTuple):
+@dataclasses.dataclass(frozen=True)
+class TransactionParameters:
     T: int    # 突破周期
     M: int    # ATR计算天数
     R: int    # 最大持仓数量
