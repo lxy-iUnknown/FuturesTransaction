@@ -47,6 +47,8 @@ class Transaction:
     def _clear_all(self):
         self._positions.clear()
 
+        self._current_profit = math.nan  # 当前利润
+
         self._enter_type = EnterType.Undefined
         self._enter_time: datetime.datetime = pd.NaT  # 入市时间
         self._enter_price = math.nan  # 入市价格
