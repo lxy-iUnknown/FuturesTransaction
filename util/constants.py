@@ -1,7 +1,7 @@
 import dataclasses
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(eq=False, frozen=True)
 class TransactionParameters:
     T: int    # 突破周期
     M: int    # ATR计算天数
