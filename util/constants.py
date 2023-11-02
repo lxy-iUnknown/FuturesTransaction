@@ -19,4 +19,4 @@ LOW = '最低价(元)'
 HIGH = '收盘价(元)'
 TR = '真实波动幅度'
 
-TRANSACTION_PARAMETERS = TransactionParameters(20, 7, 4, 0.5, 2.0, 3.0, 0.6)
+PARAMETERS = TransactionParameters(20, 7, 4, 0.5, 2.0, 3.0, 0.6)

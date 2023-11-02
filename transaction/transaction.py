@@ -5,9 +5,9 @@ import warnings
 
 import pandas as pd
 
-from util.constants import TRANSACTION_PARAMETERS, HIGH, LOW, TR
+from util.constants import PARAMETERS, HIGH, LOW, TR
 
-ATR_START_DATE = TRANSACTION_PARAMETERS.T + TRANSACTION_PARAMETERS.M
+ATR_START_DATE = PARAMETERS.T + PARAMETERS.M
 
 
 class EnterType(enum.StrEnum):
@@ -103,11 +103,13 @@ class Transaction:
         """
         if index == ATR_START_DATE:
             # 计算第一个ATR
-            sum_tr = self._tr_series[TRANSACTION_PARAMETERS.T + 1: ATR_START_DATE + 1].sum()
-            self._atr = float(sum_tr) / TRANSACTION_PARAMETERS.M
+            # 真实波动幅度(TR)数值只有第一个数值是NaN，其他都不是。以下代码假定T >= 0，于是T + 1 >= 1
+            # 也就是说，tr_series[T + 1: T + M + 1]不包含NaN值，从而提高计算速度
+            self._atr = self._tr_series[PARAMETERS.T + 1: ATR_START_DATE + 1].mean(skipna=False)
+            assert not math.isnan(self._atr), '真实波动幅度包含NaN'
         elif index > ATR_START_DATE:
             # 计算下一个ATR
-            self._atr = (self._atr * (TRANSACTION_PARAMETERS.M - 1) + tr) / TRANSACTION_PARAMETERS.M
+            self._atr = (self._atr * (PARAMETERS.M - 1) + tr) / PARAMETERS.M
         else:
             # 没有足够的数据来计算ATR
             self._atr = 0.0
@@ -118,7 +120,7 @@ class Transaction:
         :param index: 日期下标
         :return:
         """
-        index_slice = slice(index - TRANSACTION_PARAMETERS.T, index)
+        index_slice = slice(index - PARAMETERS.T, index)
         self._high_max = self._high_series[index_slice].max()
         self._low_min = self._low_series[index_slice].min()
 
@@ -169,9 +171,9 @@ class Transaction:
         :param low: 当日最低价
         :return:
         """
-        if not self._entered or self._position_count >= TRANSACTION_PARAMETERS.R:
+        if not self._entered or self._position_count >= PARAMETERS.R:
             return
-        price_break = TRANSACTION_PARAMETERS.N * self._atr
+        price_break = PARAMETERS.N * self._atr
         if self._enter_type == EnterType.LongPosition:
             # 当日最高价高于上一次开仓价加上N个当日ATR
             open_price = self._last_open_price + price_break
@@ -249,12 +251,12 @@ class Transaction:
             return
         if self._enter_type == EnterType.LongPosition:
             # 当日最低价小于K倍入市ATR和上一次开仓价之差
-            exit_price = self._last_open_price - TRANSACTION_PARAMETERS.K * self._enter_atr
+            exit_price = self._last_open_price - PARAMETERS.K * self._enter_atr
             if low < exit_price:
                 self._exiting_with_price(time_today, exit_price, ExitType.LongLoss)
         elif self._enter_type == EnterType.ShortPosition:
             # 当日最高价大于K倍入市ATR和上一次开仓价之和
-            exit_price = self._last_open_price + TRANSACTION_PARAMETERS.K * self._enter_atr
+            exit_price = self._last_open_price + PARAMETERS.K * self._enter_atr
             if high > exit_price:
                 self._exiting_with_price(time_today, exit_price, ExitType.ShortLoss)
 
@@ -266,14 +268,14 @@ class Transaction:
         """
         if self._stop_profit_prepared:
             # 当前利润小于入市以来最高利润的比例Q时正式止盈
-            exit_profit = TRANSACTION_PARAMETERS.Q * self._max_profit
+            exit_profit = PARAMETERS.Q * self._max_profit
             if self._current_profit < exit_profit:
                 if self._enter_type == EnterType.LongPosition:
                     self._exiting_with_profit(time_today, exit_profit, ExitType.LongProfit)
                 elif self._enter_type == EnterType.ShortPosition:
                     self._exiting_with_profit(time_today, exit_profit, ExitType.ShortProfit)
                 self._stop_profit_prepared = False
-        elif self._entered and self._current_profit > TRANSACTION_PARAMETERS.P * self._atr:
+        elif self._entered and self._current_profit > PARAMETERS.P * self._atr:
             # 当前利润超过P个当日ATR时准备止盈
             self._stop_profit_prepared = True
 
@@ -341,7 +343,7 @@ class Transaction:
         # https://github.com/pandas-dev/pandas/issues/39122
         # https://github.com/pandas-dev/pandas/pull/52532
         with warnings.catch_warnings(action='ignore', category=FutureWarning):
-            self._output.loc[index - TRANSACTION_PARAMETERS.T] = (
+            self._output.loc[index - PARAMETERS.T] = (
                 time_today, atr, high, low, open_price, close_price, enter_time, str(enter_type),
                 enter_atr, enter_price, long_position_count, short_position_count, self._high_max,
                 self._low_min, max_profit, current_profit, str(exit_type), exit_time, exit_profit
@@ -352,7 +354,7 @@ class Transaction:
 
     def transact(self):
         for index, time_today, open_price, close_price, \
-                high, low, tr in self._input[TRANSACTION_PARAMETERS.T:].itertuples(name=None):
+                high, low, tr in self._input[PARAMETERS.T:].itertuples(name=None):
             self._calculate_atr(index, tr)
             self._calculate_min_max(index)
             self._enter(time_today, high, low)
