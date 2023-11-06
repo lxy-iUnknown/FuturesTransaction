@@ -2,7 +2,7 @@ import pandas as pd
 
 from util.constants import DATE, HIGH, LOW, LOW_MIN, HIGH_MAX, OPEN, CLOSE, ATR
 from util.data_io import load_data, save_data
-from transaction.transact import Transact
+from transact.transact import Transact
 
 output = pd.DataFrame(columns=[
     DATE, ATR, HIGH, LOW, OPEN, CLOSE, '入市时间', '入市类型', '入市ATR', '入市价格(元)', '多头持仓数量',
