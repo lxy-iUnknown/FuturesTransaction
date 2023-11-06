@@ -1,15 +1,4 @@
-import dataclasses
-
-
-@dataclasses.dataclass(eq=False, frozen=True)
-class TransactionParameters:
-    T: int    # 突破周期
-    M: int    # ATR计算天数
-    R: int    # 最大持仓数量
-    N: float  # 加仓触发ATR数量
-    K: float  # 止损回撤率
-    P: float  # 止盈利润倍数
-    Q: float  # 止盈回撤比例
+from util.transact_params import TransactParams
 
 
 DATE = '日期'
@@ -22,4 +11,4 @@ HIGH_MAX = '前T日最高价(元)'
 TR = '真实波动幅度'
 ATR = 'ATR'
 
-PARAMETERS = TransactionParameters(20, 7, 4, 0.5, 2.0, 3.0, 0.6)
+TRANSACT_PARAMS = TransactParams(20, 7, 4, 0.5, 2.0, 3.0, 0.6)
