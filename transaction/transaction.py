@@ -3,9 +3,10 @@ import enum
 import math
 import warnings
 
+import numpy as np
 import pandas as pd
 
-from util.constants import PARAMETERS, HIGH, LOW, TR
+from util.constants import PARAMETERS, HIGH, LOW, HIGH_MAX, LOW_MIN, TR, ATR
 
 ATR_START_DATE = PARAMETERS.T + PARAMETERS.M
 
@@ -27,17 +28,24 @@ class ExitType(enum.StrEnum):
 
 class Transaction:
     def __init__(self, input_data: pd.DataFrame, output_data: pd.DataFrame):
+        tr_series = input_data[TR]
+        # 计算前T日ATR
+        series = pd.concat([
+            pd.Series(np.full(PARAMETERS.T + PARAMETERS.M, np.nan)),
+            pd.Series(tr_series[PARAMETERS.T + 1: PARAMETERS.T + PARAMETERS.M + 1].mean(skipna=False)),
+            tr_series[PARAMETERS.T + PARAMETERS.M + 1:],
+        ], ignore_index=True)
+        # 计算前T日最高价和最低价
+        input_data[HIGH_MAX] = input_data[HIGH].rolling(window=PARAMETERS.T, closed='left').max()
+        input_data[LOW_MIN] = input_data[LOW].rolling(window=PARAMETERS.T, closed='left').min()
+        # 计算前T日ATR
+        input_data[ATR] = series.ewm(alpha=1.0 / PARAMETERS.M, adjust=False, ignore_na=False).mean()
+
         self._input = input_data
         self._output = output_data
         self._last_index = len(input_data) - 1
 
-        self._high_series: pd.Series = input_data[HIGH]  # 输入数据最高价
-        self._low_series: pd.Series = input_data[LOW]    # 输入数据最低价
         self._tr_series: pd.Series = input_data[TR]      # 输入数据TR
-
-        self._atr = 0.0  # 当日ATR
-        self._high_max = 0.0  # 前T日最高价
-        self._low_min = 0.0  # 前T日最低价
 
         self._positions: list[float] = []  # 每一次开仓价格
 
@@ -94,67 +102,42 @@ class Transaction:
         """
         return self._exit_type != ExitType.Undefined
 
-    def _calculate_atr(self, index: int, tr: float):
-        """
-        计算当日ATR
-        :param index: 日期下标
-        :param tr: 当日真实波动幅度(TR)
-        :return:
-        """
-        if index == ATR_START_DATE:
-            # 计算第一个ATR
-            # 真实波动幅度(TR)数值只有第一个数值是NaN，其他都不是。以下代码假定T >= 0，于是T + 1 >= 1
-            # 也就是说，tr_series[T + 1: T + M + 1]不包含NaN值，从而提高计算速度
-            self._atr = self._tr_series[PARAMETERS.T + 1: ATR_START_DATE + 1].mean(skipna=False)
-            assert not math.isnan(self._atr), '真实波动幅度包含NaN'
-        elif index > ATR_START_DATE:
-            # 计算下一个ATR
-            self._atr = (self._atr * (PARAMETERS.M - 1) + tr) / PARAMETERS.M
-        else:
-            # 没有足够的数据来计算ATR
-            self._atr = 0.0
-
-    def _calculate_min_max(self, index: int):
-        """
-        计算前T日最高价和最低价
-        :param index: 日期下标
-        :return:
-        """
-        index_slice = slice(index - PARAMETERS.T, index)
-        self._high_max = self._high_series[index_slice].max()
-        self._low_min = self._low_series[index_slice].min()
-
-    def _enter_common(self, time_today: datetime.datetime, enter_type: EnterType, enter_price: float):
+    def _enter_common(self, time_today: datetime.datetime,
+                      enter_type: EnterType, enter_price: float, atr: float):
         """
         记录入市时间、入市类型、入市价格（此前T日最高价格）、入市ATR
         :param enter_price: 入市价格
         :param time_today: 当日日期
         :param enter_type: 入市类型
+        :param atr: 当日ATR
         :return:
         """
         self._positions.append(enter_price)
         self._enter_time = time_today
         self._enter_price = enter_price
         self._enter_type = enter_type
-        self._enter_atr = self._atr
+        self._enter_atr = atr
 
-    def _enter(self, time_today: datetime.datetime, high: float, low: float):
+    def _enter(self, time_today: datetime.datetime, high: float, low: float,
+               high_max: float, low_min: float, atr: float):
         """
         入市操作
         :param time_today: 当日日期
         :param high: 当日最高价
         :param low: 当日最低价
+        :param high_max: 前T日最高价
+        :param low_min: 前T日最低价
+        :param atr: 当日ATR
         :return:
         """
         if self._entered:
             return
-        high_max = self._high_max
         if high > high_max:
             # 当日最高价高于此前T日最高价格
-            self._enter_common(time_today, EnterType.LongPosition, high_max)
-        elif low < self._low_min:
+            self._enter_common(time_today, EnterType.LongPosition, high_max, atr)
+        elif low < low_min:
             # 当日最低价低于此前T日最低价格
-            self._enter_common(time_today, EnterType.ShortPosition, high_max)
+            self._enter_common(time_today, EnterType.ShortPosition, high_max, atr)
 
     def _add_common(self, add_price: float):
         """
@@ -164,16 +147,17 @@ class Transaction:
         """
         self._positions.append(add_price)
 
-    def _add_position(self, high: float, low: float):
+    def _add_position(self, high: float, low: float, atr: float):
         """
         加仓操作
         :param high: 当日最高价
         :param low: 当日最低价
+        :param atr: 当日ATR
         :return:
         """
         if not self._entered or self._position_count >= PARAMETERS.R:
             return
-        price_break = PARAMETERS.N * self._atr
+        price_break = PARAMETERS.N * atr
         if self._enter_type == EnterType.LongPosition:
             # 当日最高价高于上一次开仓价加上N个当日ATR
             open_price = self._last_open_price + price_break
@@ -217,7 +201,8 @@ class Transaction:
         self._exit_time = time_today
         self._exit_profit = self._current_profit
 
-    def _exiting_with_price(self, time_today: datetime.datetime, exit_price: float, exit_type: ExitType):
+    def _exiting_with_price(self, time_today: datetime.datetime,
+                            exit_price: float, exit_type: ExitType):
         """
         准备离市（使用离市价格计算离市利润）
         :param time_today: 当日日期
@@ -228,7 +213,8 @@ class Transaction:
         self._calculate_profit(exit_price)
         self._exiting_common(time_today, exit_type)
 
-    def _exiting_with_profit(self, time_today: datetime.datetime, exit_profit: float, exit_type: ExitType):
+    def _exiting_with_profit(self, time_today: datetime.datetime,
+                             exit_profit: float, exit_type: ExitType):
         """
         准备离市（直接使用离市利润）
         :param time_today: 当日日期
@@ -260,10 +246,11 @@ class Transaction:
             if high > exit_price:
                 self._exiting_with_price(time_today, exit_price, ExitType.ShortLoss)
 
-    def _stop_profit(self, time_today: datetime.datetime):
+    def _stop_profit(self, time_today: datetime.datetime, atr: float):
         """
         止盈操作
         :param time_today: 当日日期
+        :param atr: 当日ATR
         :return:
         """
         if self._stop_profit_prepared:
@@ -275,7 +262,7 @@ class Transaction:
                 elif self._enter_type == EnterType.ShortPosition:
                     self._exiting_with_profit(time_today, exit_profit, ExitType.ShortProfit)
                 self._stop_profit_prepared = False
-        elif self._entered and self._current_profit > PARAMETERS.P * self._atr:
+        elif self._entered and self._current_profit > PARAMETERS.P * atr:
             # 当前利润超过P个当日ATR时准备止盈
             self._stop_profit_prepared = True
 
@@ -290,7 +277,8 @@ class Transaction:
             self._exiting_with_price(time_today, close_price, ExitType.Expired)
 
     def _write_info(self, index: int, time_today: int, high: float,
-                    low: float, open_price: float, close_price: float):
+                    low: float, open_price: float, close_price: float,
+                    high_max: float, low_min: float, atr: float):
         """
         输出当日信息
         :param index: 日期下标
@@ -299,6 +287,7 @@ class Transaction:
         :param low: 当日最低价
         :param open_price: 当日开盘价
         :param close_price: 当日收盘价
+        :param atr: 当日ATR
         :return:
         """
         if self._entered:
@@ -335,9 +324,7 @@ class Transaction:
             exit_time = pd.NaT
             exit_profit = math.nan
 
-        if index >= ATR_START_DATE:
-            atr = self._atr
-        else:
+        if index < ATR_START_DATE:
             atr = math.nan
 
         # https://github.com/pandas-dev/pandas/issues/39122
@@ -345,8 +332,8 @@ class Transaction:
         with warnings.catch_warnings(action='ignore', category=FutureWarning):
             self._output.loc[index - PARAMETERS.T] = (
                 time_today, atr, high, low, open_price, close_price, enter_time, str(enter_type),
-                enter_atr, enter_price, long_position_count, short_position_count, self._high_max,
-                self._low_min, max_profit, current_profit, str(exit_type), exit_time, exit_profit
+                enter_atr, enter_price, long_position_count, short_position_count, high_max,
+                low_min, max_profit, current_profit, str(exit_type), exit_time, exit_profit
             )
         if self._exiting:
             # 清空所有数据
@@ -354,13 +341,13 @@ class Transaction:
 
     def transact(self):
         for index, time_today, open_price, close_price, \
-                high, low, tr in self._input[PARAMETERS.T:].itertuples(name=None):
-            self._calculate_atr(index, tr)
-            self._calculate_min_max(index)
-            self._enter(time_today, high, low)
-            self._add_position(high, low)
+                high, low, tr, high_max, low_min, atr \
+                in self._input[PARAMETERS.T:].itertuples(name=None):
+            self._enter(time_today, high, low, high_max, low_min, atr)
+            self._add_position(high, low, atr)
             self._calculate_profit(close_price)
             self._stop_loss(time_today, high, low)
-            self._stop_profit(time_today)
+            self._stop_profit(time_today, atr)
             self._expire(index, time_today, close_price)
-            self._write_info(index, time_today, high, low, open_price, close_price)
+            self._write_info(index, time_today, high, low,
+                             open_price, close_price, high_max, low_min, atr)
