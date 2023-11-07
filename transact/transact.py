@@ -31,15 +31,15 @@ class Transact:
         tr_series = input_data[TR]
         # 计算前T日ATR
         series = pd.concat([
-            pd.Series(np.full(TRANSACT_PARAMS.T + TRANSACT_PARAMS.M, np.nan)),
-            pd.Series(tr_series[TRANSACT_PARAMS.T + 1: TRANSACT_PARAMS.T + TRANSACT_PARAMS.M + 1].mean(skipna=False)),
-            tr_series[TRANSACT_PARAMS.T + TRANSACT_PARAMS.M + 1:],
+            pd.Series(np.full(ATR_START_DATE, np.nan)),
+            pd.Series(tr_series[TRANSACT_PARAMS.T + 1: ATR_START_DATE + 1].mean(skipna=False)),
+            tr_series[ATR_START_DATE + 1:],
         ], ignore_index=True)
         # 计算前T日最高价和最低价
         input_data[HIGH_MAX] = input_data[HIGH].rolling(window=TRANSACT_PARAMS.T, closed='left').max()
         input_data[LOW_MIN] = input_data[LOW].rolling(window=TRANSACT_PARAMS.T, closed='left').min()
         # 计算前T日ATR
-        input_data[ATR] = series.ewm(alpha=1.0 / TRANSACT_PARAMS.M, adjust=False, ignore_na=False).mean()
+        input_data[ATR] = series.ewm(alpha=1.0 / TRANSACT_PARAMS.M, adjust=False).mean().fillna(0)
 
         self._input = input_data
         self._output = output_data
