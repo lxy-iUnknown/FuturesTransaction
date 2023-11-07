@@ -1,6 +1,5 @@
 from util.transact_params import TransactParams
 
-
 DATE = '日期'
 OPEN = '开盘价(元)'
 CLOSE = '收盘价(元)'

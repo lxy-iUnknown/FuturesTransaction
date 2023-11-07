@@ -45,7 +45,7 @@ class Transact:
         self._output = output_data
         self._last_index = len(input_data) - 1
 
-        self._tr_series: pd.Series = input_data[TR]      # 输入数据TR
+        self._tr_series: pd.Series = input_data[TR]  # 输入数据TR
 
         self._positions: list[float] = []  # 每一次开仓价格
 
