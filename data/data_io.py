@@ -1,10 +1,11 @@
+import pathlib
 import pandas as pd
 import traceback
 
-from data.data_dir import DATA_DIR
 from util.constants import DATE, OPEN, CLOSE, LOW, HIGH, TR
 
 USE_COLUMNS = (DATE, OPEN, CLOSE, LOW, HIGH, TR)
+DATA_DIR = pathlib.Path(__file__).parent
 DATA_FILE = DATA_DIR.joinpath('data.xlsx')
 OUTPUT_FILE = DATA_DIR.joinpath('output.xlsx')
 
