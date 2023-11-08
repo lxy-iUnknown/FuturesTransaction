@@ -24,4 +24,4 @@ def save_data(output: pd.DataFrame):
         except AttributeError as e:
             print('AttributeError occurred')
             traceback.print_exception(e)
-        output.convert_dtypes().to_excel(writer, index=False)
+        output.to_excel(writer, index=False)
