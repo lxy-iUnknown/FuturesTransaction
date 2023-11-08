@@ -2,7 +2,7 @@ import dataclasses
 
 
 @dataclasses.dataclass(eq=False, frozen=True)
-class TransactParams:
+class TransactionParams:
     T: int  # 突破周期
     M: int  # ATR计算天数
     R: int  # 最大持仓数量

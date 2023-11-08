@@ -6,9 +6,9 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from util.constants import TRANSACT_PARAMS, HIGH, LOW, HIGH_MAX, LOW_MIN, TR, ATR
+from util.constants import TRANSACTION_PARAMS, HIGH, LOW, HIGH_MAX, LOW_MIN, TR, ATR
 
-ATR_START_DATE = TRANSACT_PARAMS.T + TRANSACT_PARAMS.M
+ATR_START_DATE = TRANSACTION_PARAMS.T + TRANSACTION_PARAMS.M
 
 
 class EnterType(enum.StrEnum):
@@ -26,20 +26,20 @@ class ExitType(enum.StrEnum):
     Undefined = ''
 
 
-class Transact:
+class Transaction:
     def __init__(self, input_data: pd.DataFrame, output_data: pd.DataFrame):
         tr_series = input_data[TR]
         # 计算前T日ATR
         series = pd.concat([
             pd.Series(np.full(ATR_START_DATE, np.nan)),
-            pd.Series(tr_series[TRANSACT_PARAMS.T + 1: ATR_START_DATE + 1].mean(skipna=False)),
+            pd.Series(tr_series[TRANSACTION_PARAMS.T + 1: ATR_START_DATE + 1].mean(skipna=False)),
             tr_series[ATR_START_DATE + 1:],
         ], ignore_index=True)
         # 计算前T日最高价和最低价
-        input_data[HIGH_MAX] = input_data[HIGH].rolling(window=TRANSACT_PARAMS.T, closed='left').max()
-        input_data[LOW_MIN] = input_data[LOW].rolling(window=TRANSACT_PARAMS.T, closed='left').min()
+        input_data[HIGH_MAX] = input_data[HIGH].rolling(window=TRANSACTION_PARAMS.T, closed='left').max()
+        input_data[LOW_MIN] = input_data[LOW].rolling(window=TRANSACTION_PARAMS.T, closed='left').min()
         # 计算前T日ATR
-        input_data[ATR] = series.ewm(alpha=1.0 / TRANSACT_PARAMS.M, adjust=False).mean().fillna(0)
+        input_data[ATR] = series.ewm(alpha=1.0 / TRANSACTION_PARAMS.M, adjust=False).mean().fillna(0)
 
         self._input = input_data
         self._output = output_data
@@ -155,9 +155,9 @@ class Transact:
         :param atr: 当日ATR
         :return:
         """
-        if not self._entered or self._position_count >= TRANSACT_PARAMS.R:
+        if not self._entered or self._position_count >= TRANSACTION_PARAMS.R:
             return
-        price_break = TRANSACT_PARAMS.N * atr
+        price_break = TRANSACTION_PARAMS.N * atr
         if self._enter_type == EnterType.LongPosition:
             # 当日最高价高于上一次开仓价加上N个当日ATR
             open_price = self._last_open_price + price_break
@@ -237,12 +237,12 @@ class Transact:
             return
         if self._enter_type == EnterType.LongPosition:
             # 当日最低价小于K倍入市ATR和上一次开仓价之差
-            exit_price = self._last_open_price - TRANSACT_PARAMS.K * self._enter_atr
+            exit_price = self._last_open_price - TRANSACTION_PARAMS.K * self._enter_atr
             if low < exit_price:
                 self._exiting_with_price(time_today, exit_price, ExitType.LongLoss)
         elif self._enter_type == EnterType.ShortPosition:
             # 当日最高价大于K倍入市ATR和上一次开仓价之和
-            exit_price = self._last_open_price + TRANSACT_PARAMS.K * self._enter_atr
+            exit_price = self._last_open_price + TRANSACTION_PARAMS.K * self._enter_atr
             if high > exit_price:
                 self._exiting_with_price(time_today, exit_price, ExitType.ShortLoss)
 
@@ -255,14 +255,14 @@ class Transact:
         """
         if self._stop_profit_prepared:
             # 当前利润小于入市以来最高利润的比例Q时正式止盈
-            exit_profit = TRANSACT_PARAMS.Q * self._max_profit
+            exit_profit = TRANSACTION_PARAMS.Q * self._max_profit
             if self._current_profit < exit_profit:
                 if self._enter_type == EnterType.LongPosition:
                     self._exiting_with_profit(time_today, exit_profit, ExitType.LongProfit)
                 elif self._enter_type == EnterType.ShortPosition:
                     self._exiting_with_profit(time_today, exit_profit, ExitType.ShortProfit)
                 self._stop_profit_prepared = False
-        elif self._entered and self._current_profit > TRANSACT_PARAMS.P * atr:
+        elif self._entered and self._current_profit > TRANSACTION_PARAMS.P * atr:
             # 当前利润超过P个当日ATR时准备止盈
             self._stop_profit_prepared = True
 
@@ -330,7 +330,7 @@ class Transact:
         # https://github.com/pandas-dev/pandas/issues/39122
         # https://github.com/pandas-dev/pandas/pull/52532
         with warnings.catch_warnings(action='ignore', category=FutureWarning):
-            self._output.loc[index - TRANSACT_PARAMS.T] = (
+            self._output.loc[index - TRANSACTION_PARAMS.T] = (
                 time_today, atr, high, low, open_price, close_price, enter_time, str(enter_type),
                 enter_atr, enter_price, long_position_count, short_position_count, high_max,
                 low_min, max_profit, current_profit, str(exit_type), exit_time, exit_profit
@@ -342,7 +342,7 @@ class Transact:
     def transact(self):
         for index, time_today, open_price, close_price, \
                 high, low, tr, high_max, low_min, atr \
-                in self._input[TRANSACT_PARAMS.T:].itertuples(name=None):
+                in self._input[TRANSACTION_PARAMS.T:].itertuples(name=None):
             self._enter(time_today, high, low, high_max, low_min, atr)
             self._add_position(high, low, atr)
             self._calculate_profit(close_price)
