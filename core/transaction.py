@@ -57,6 +57,10 @@ class Transaction:
 
         self._current_profit = math.nan  # 当前利润
 
+        # 状态：
+        # 1. 未入市 (enter_type == Undefined, exit_type == Undefined)
+        # 2. 已入市但未离市 (enter_type != Undefined, exit_type == Undefined)
+        # 3. 已入市且正在离市 (enter_type != Undefined, exit_type != Undefined)
         self._enter_type = EnterType.Undefined
         self._enter_time: datetime.datetime = pd.NaT  # 入市时间
         self._enter_price = math.nan  # 入市价格
@@ -76,7 +80,8 @@ class Transaction:
         获取上一次开仓价格
         :return: 上一次开仓价格
         """
-        return math.nan if self._position_count == 0 else self._positions[-1]
+        assert self._position_count != 0, '未开仓'
+        return self._positions[-1]
 
     @property
     def _position_count(self):
