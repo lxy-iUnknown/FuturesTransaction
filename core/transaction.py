@@ -31,6 +31,7 @@ class Transaction:
         tr_series = input_data[TR]
         # 计算前T日ATR
         series = pd.concat([
+            # 前T + M日用NaN填充不会影响最终的计算结果
             pd.Series(np.full(ATR_START_DATE, np.nan)),
             pd.Series(tr_series[TRANSACTION_PARAMS.T + 1: ATR_START_DATE + 1].mean(skipna=False)),
             tr_series[ATR_START_DATE + 1:],
@@ -189,11 +190,12 @@ class Transaction:
         :param price: 利润计算价格
         :return:
         """
-        if self._entered:
-            profit = price * self._position_count - sum(self._positions)
-            if self._enter_type == EnterType.ShortPosition:
-                profit = -profit
-            self._update_profit(profit)
+        if not self._entered:
+            return
+        profit = price * self._position_count - sum(self._positions)
+        if self._enter_type == EnterType.ShortPosition:
+            profit = -profit
+        self._update_profit(profit)
 
     def _exiting_common(self, time_today: datetime.datetime, exit_type: ExitType):
         """
