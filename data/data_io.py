@@ -1,6 +1,7 @@
 import pathlib
-import pandas as pd
 import traceback
+
+import pandas as pd
 
 from util.constants import DATE, OPEN, CLOSE, LOW, HIGH, TR
 
