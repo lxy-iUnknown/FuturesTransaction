@@ -7,8 +7,8 @@ from util.constants import DATE, OPEN, CLOSE, LOW, HIGH, TR
 
 USE_COLUMNS = (DATE, OPEN, CLOSE, LOW, HIGH, TR)
 DATA_DIR = pathlib.Path(__file__).parent
-DATA_FILE = DATA_DIR.joinpath('data.xlsx')
-OUTPUT_FILE = DATA_DIR.joinpath('output.xlsx')
+DATA_FILE = DATA_DIR / 'data.xlsx'
+OUTPUT_FILE = DATA_DIR / 'output.xlsx'
 
 DATE_TIME_FORMAT = 'YYYY-MM-DD'
 
